@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gig Worker Job Change Predictor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 20px;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .probability-bar {
+            height: 20px;
+            background-color: #007bff;
+            border-radius: 10px;
+            margin-top: 10px;
+            transition: width 1s ease-in-out;
+        }
+        .feature-importance {
+            margin-top: 30px;
+            display: none;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .tooltip-icon {
+            color: #6c757d;
+            margin-left: 5px;
+            cursor: help;
+        }
+        .prediction-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .prediction-low {
+            color: #198754;
+            font-weight: bold;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4 text-center">Gig Worker Job Change Predictor</h1>
+        <p class="text-center text-muted mb-4">Enter gig worker details to predict likelihood of job change</p>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <form id="predictionForm">
+                    <div class="card mb-4">
+                        <div class="card-header">Personal Information</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="age" class="form-label">Age <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Age of the gig worker"></i></label>
+                                    <input type="number" class="form-control" id="age" required min="18" max="100">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="education_level" class="form-label">Education Level <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Highest education level achieved"></i></label>
+                                    <select class="form-control" id="education_level" required>
+                                        <option value="High School">High School</option>
+                                        <option value="Bachelor">Bachelor</option>
+                                        <option value="Master">Master</option>
+                                        <option value="PhD">PhD</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="years_experience" class="form-label">Years of Experience <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Total years of work experience"></i></label>
+                                    <input type="number" class="form-control" id="years_experience" required min="0" max="50">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="current_income" class="form-label">Current Income <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Monthly income in dollars"></i></label>
+                                    <input type="number" class="form-control" id="current_income" required min="0">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="hours_per_week" class="form-label">Hours per Week <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Average hours worked per week"></i></label>
+                                    <input type="number" class="form-control" id="hours_per_week" required min="0" max="168">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="industry" class="form-label">Industry <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Industry sector of employment"></i></label>
+                                    <select class="form-control" id="industry" required>
+                                        <option value="Tech">Tech</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Education">Education</option>
+                                        <option value="Retail">Retail</option>
+                                        <option value="Transportation">Transportation</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">Job Satisfaction Metrics</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="job_satisfaction" class="form-label">Job Satisfaction <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate job satisfaction from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="job_satisfaction" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="job_satisfaction_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="work_life_balance" class="form-label">Work-Life Balance <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate work-life balance from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="work_life_balance" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="work_life_balance_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="skill_diversity" class="form-label">Skill Diversity <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate skill diversity from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="skill_diversity" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="skill_diversity_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="market_demand" class="form-label">Market Demand <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate market demand for skills from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="market_demand" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="market_demand_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="job_stability" class="form-label">Job Stability <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate job stability from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="job_stability" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="job_stability_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="benefits_score" class="form-label">Benefits Score <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate benefits package from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="benefits_score" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="benefits_score_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">Additional Factors</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="commute_time" class="form-label">Commute Time (minutes) <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Average daily commute time in minutes"></i></label>
+                                    <input type="number" class="form-control" id="commute_time" required min="0" max="180">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="flexibility_score" class="form-label">Flexibility Score <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate work schedule flexibility from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="flexibility_score" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="flexibility_score_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="training_opportunities" class="form-label">Training Opportunities <i class="bi bi-info-circle tooltip-icon" data-bs-toggle="tooltip" title="Rate training and development opportunities from 1-10"></i></label>
+                                    <input type="range" class="form-range" id="training_opportunities" min="1" max="10" step="1" value="5">
+                                    <div class="d-flex justify-content-between">
+                                        <span>1</span>
+                                        <span id="training_opportunities_value">5</span>
+                                        <span>10</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">Predict Job Change Likelihood</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="col-md-4">
+                <div id="result" class="result-box">
+                    <h3 class="text-center">Prediction Result</h3>
+                    <div class="text-center mb-3">
+                        <i id="resultIcon" class="bi bi-emoji-smile display-1"></i>
+                    </div>
+                    <p id="predictionMessage" class="text-center h4 mb-3"></p>
+                    <p class="text-center">Probability of changing jobs: <span id="probability" class="h5"></span>%</p>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div id="probabilityBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h5>Key Factors</h5>
+                        <ul id="keyFactors" class="list-group">
+                            <!-- Key factors will be populated here -->
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="featureImportance" class="feature-importance">
+                    <h4 class="text-center">Feature Importance</h4>
+                    <canvas id="featureImportanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let featureImportanceChart = null;
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Update range input values
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            const valueDisplay = input.nextElementSibling.querySelector('span:nth-child(2)');
+            input.addEventListener('input', () => {
+                valueDisplay.textContent = input.value;
+            });
+        });
+
+        // Form submission handler
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing data...</p>
+                </div>`;
+
+            // Collect form data
+            const formData = {
+                age: document.getElementById('age').value,
+                education_level: document.getElementById('education_level').value,
+                years_experience: document.getElementById('years_experience').value,
+                current_income: document.getElementById('current_income').value,
+                hours_per_week: document.getElementById('hours_per_week').value,
+                job_satisfaction: document.getElementById('job_satisfaction').value,
+                work_life_balance: document.getElementById('work_life_balance').value,
+                skill_diversity: document.getElementById('skill_diversity').value,
+                market_demand: document.getElementById('market_demand').value,
+                job_stability: document.getElementById('job_stability').value,
+                benefits_score: document.getElementById('benefits_score').value,
+                commute_time: document.getElementById('commute_time').value,
+                flexibility_score: document.getElementById('flexibility_score').value,
+                training_opportunities: document.getElementById('training_opportunities').value,
+                industry: document.getElementById('industry').value
+            };
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Update result display
+                    resultDiv.innerHTML = `
+                        <h3 class="text-center">Prediction Result</h3>
+                        <div class="text-center mb-3">
+                            <i class="bi ${result.prediction === 1 ? 'bi-arrow-right-circle text-danger' : 'bi-check-circle text-success'} display-1"></i>
+                            <h4 class="mt-2">${result.message}</h4>
+                        </div>
+                        <p class="text-center">Probability of changing jobs: <span class="h5">${(result.probability * 100).toFixed(1)}%</span></p>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar ${result.prediction === 1 ? 'bg-danger' : 'bg-success'}" 
+                                 role="progressbar" 
+                                 style="width: ${result.probability * 100}%;" 
+                                 aria-valuenow="${result.probability * 100}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${(result.probability * 100).toFixed(1)}%
+                            </div>
+                        </div>`;
+
+                    // Add key factors if available
+                    if (result.key_factors && result.key_factors.length > 0) {
+                        const keyFactorsHtml = `
+                            <div class="mt-3">
+                                <h5>Key Factors</h5>
+                                <ul class="list-group">
+                                    ${result.key_factors.map(factor => `
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            ${factor.name}
+                                            <span class="badge ${factor.impact > 0 ? 'bg-danger' : 'bg-success'} rounded-pill">
+                                                ${Math.abs(factor.impact).toFixed(2)}
+                                            </span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>`;
+                        resultDiv.innerHTML += keyFactorsHtml;
+                    }
+
+                    // Add feature importance chart if available
+                    if (result.feature_importance && result.feature_importance.length > 0) {
+                        const chartDiv = document.createElement('div');
+                        chartDiv.className = 'feature-importance mt-4';
+                        chartDiv.innerHTML = `
+                            <h4 class="text-center">Feature Importance</h4>
+                            <canvas id="featureImportanceChart"></canvas>`;
+                        resultDiv.appendChild(chartDiv);
+
+                        // Destroy existing chart if it exists
+                        if (featureImportanceChart) {
+                            featureImportanceChart.destroy();
+                        }
+
+                        // Create new chart
+                        const ctx = document.getElementById('featureImportanceChart').getContext('2d');
+                        featureImportanceChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: result.feature_importance.map(f => f.name),
+                                datasets: [{
+                                    label: 'Feature Importance',
+                                    data: result.feature_importance.map(f => f.importance),
+                                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                indexAxis: 'y',
+                                scales: {
+                                    x: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            Error: ${result.error || 'An error occurred while processing your request.'}
+                        </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        Error: ${error.message || 'An error occurred while processing your request.'}
+                    </div>`;
+            }
+        });
+    </script>
+</body>
+</html> 

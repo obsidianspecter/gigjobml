@@ -1,0 +1,82 @@
+# Virtual Environment
+venv/
+env/
+.env/
+.venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.so.*
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Model files
+*.joblib
+*.pkl
+*.h5
+
+# Logs
+*.log
+
+# Local development settings
+.env
+.env.local
+
+# Large data files
+*.xlsx
+*.csv
+*.xls
+
+# Generated plots and visualizations
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Model files
+*.joblib
+*.pkl
+*.h5
+
+# Logs
+*.log
+
+# Local development settings
+.env
+.env.local 
